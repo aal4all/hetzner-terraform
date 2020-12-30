@@ -1,2 +1,2 @@
 # hetzner-terraform
-VM in Hetznercloud
+VMs in Hetznercloud
