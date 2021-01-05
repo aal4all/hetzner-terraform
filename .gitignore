@@ -1,6 +1,9 @@
 # Local .terraform directories
 **/.terraform/*
 
+# terraform.tfvars to keep secrets secret
+terraform.tfvars
+
 # .tfstate files
 *.tfstate
 *.tfstate.*

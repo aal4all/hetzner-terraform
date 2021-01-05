@@ -1,0 +1,245 @@
+%define __python %{__python3}
+
+%global gname haclient
+%global uname hacluster
+
+%define checkout        39d42c2
+
+Name:           crmsh
+Summary:        Pacemaker command line interface
+Version:        4.2.0
+Release:        0.%{checkout}.1
+License:        GPLv2
+Url:            https://github.com/ClusterLabs/crmsh
+Group:          System/Base
+Source0:        https://github.com/ClusterLabs/crmsh/archive/%{version}/%{name}-%{version}.tar.gz
+Patch0:         crmsh-4.1.0-fix-version-4.1.0.patch
+Patch16:        0016-Fix-python2-calls.patch
+Requires(pre):  pacemaker
+Requires:       python3
+Requires:       python3-dateutil
+Requires:       python3-lxml
+Requires:       python3-PyYAML
+Requires:       python3-pygments
+Requires:       pssh
+Requires:       pacemaker
+Requires:       corosync
+
+BuildRequires:  pkgconfig
+BuildRequires:  python3-lxml
+BuildRequires:  python3-PyYAML
+BuildRequires:  python3-setuptools
+BuildRequires:  python3-dateutil
+BuildRequires:  python3-pygments
+BuildRequires:  pacemaker
+#BuildRequires:  cluster-glue-devel
+BuildRequires:  automake
+BuildRequires:  autoconf
+BuildRequires:  asciidoc
+BuildRequires:  libtool
+BuildRequires:  corosync
+BuildRequires:  procps
+#BuildRequires:  vim-minimal
+#BuildRequires:  libxslt-tools
+#BuildRequires:  dblatex
+#BuildRequires:  fop
+#BuildRequires:  w3m
+BuildArch:      noarch
+
+%description
+crm shell, a Pacemaker command line interface.
+
+Pacemaker is an advanced, scalable High-Availability cluster resource
+manager for Heartbeat and/or Corosync.
+
+%package test
+Summary:        Test package for crmsh
+Group:          System/Base
+Requires:       crmsh
+%if 0%{?with_regression_tests}
+BuildRequires:  corosync
+BuildRequires:  procps
+BuildRequires:  python3-dateutil
+BuildRequires:  python3-nose
+BuildRequires:  vim
+Requires:       pacemaker
+Requires:       pssh
+%endif
+
+%description test
+The crm shell is a command-line interface for High-Availability
+cluster management on GNU/Linux systems. It simplifies the
+configuration, management and troubleshooting of Pacemaker-based
+clusters, by providing a powerful and intuitive set of features.
+
+%package scripts
+Summary:        Crm Shell Cluster Scripts
+Group:          System/Base
+
+%description scripts
+Cluster scripts for crmsh. The cluster scripts can be run
+directly from the crm command line, or used by user interfaces
+like hawk to implement configuration wizards.
+
+%prep
+%setup -q
+%autopatch -p1
+
+# Force the local time
+#
+# 'hg archive' sets the file date to the date of the last commit.
+# This can result in files having been created in the future
+# when building on machines in timezones 'behind' the one the 
+# commit occurred in - which seriously confuses 'make'
+find . -exec touch \{\} \;
+
+%build
+./autogen.sh
+
+%configure              \
+        --localstatedir=%{_var} \
+        --with-version=%{version}-%{release} \
+        --docdir=%{_defaultdocdir}/%{name} \
+        --libdir=%{python3_sitelib}/%{name}
+
+%make_build  docdir=%{_defaultdocdir}/%{name}
+%if 0%{?with_regression_tests}
+        ./test/unit-tests.sh --quiet
+    if [ ! $? ]; then
+        echo "Unit tests failed."
+        exit 1
+    fi
+%endif
+
+
+%install
+%make_install docdir=%{_defaultdocdir}/%{name}
+
+# python shebangs
+pathfix.py -pni "%{__python3} %{py3_shbang_opts}" %{buildroot}%{_bindir}/crm
+
+
+%if 0%{?with_regression_tests}
+%post test
+if [ ! -e /tmp/.crmsh_regression_tests_ran ]; then
+    touch /tmp/.crmsh_regression_tests_ran
+    if ! %{_datadir}/%{name}/tests/regression.sh ; then
+        echo "Regression tests failed."
+        cat crmtestout/regression.out
+        exit 1
+    fi
+        cd %{_datadir}/%{name}/tests
+        if ! ./cib-tests.sh ; then
+                echo "CIB tests failed."
+                exit 1
+        fi
+fi
+%endif
+
+%files
+%{_bindir}/crm
+%{_datadir}/%{name}/
+%{python3_sitelib}/%{name}
+%{python3_sitelib}/%{name}-%{version}-py%{python3_version}.egg-info
+%{_mandir}/man8/crm*
+%exclude %{_datadir}/%{name}/tests
+%exclude %{_datadir}/%{name}/scripts
+
+%{_defaultdocdir}/%{name}/COPYING
+%{_defaultdocdir}/%{name}/AUTHORS
+%{_defaultdocdir}/%{name}/ChangeLog
+%{_defaultdocdir}/%{name}/README.md
+%{_defaultdocdir}/%{name}/contrib/*
+%{_defaultdocdir}/%{name}/crm.8.html
+%{_defaultdocdir}/%{name}/crmsh_hb_report.8.html
+%config %{_sysconfdir}/crm
+
+%dir %{_defaultdocdir}/%{name}
+%dir %{_defaultdocdir}/%{name}/contrib
+%dir %attr (770, %{uname}, %{gname}) %{_var}/cache/crm
+
+%files test
+%{_datadir}/%{name}/tests
+
+%files scripts
+%{_datadir}/%{name}/scripts
+
+
+%changelog
+* Fri Jan 01 2021 neoclust <neoclust> 4.2.0-0.39d42c2.1.mga8
++ Revision: 1668029
+- New snapshot of version 4.2.0
+
+* Mon Feb 17 2020 daviddavid <daviddavid> 4.1.0-2.mga8
++ Revision: 1536950
+- fix python shebangs
++ umeabot <umeabot>
+- Mageia 8 Mass Rebuild
++ wally <wally>
+- replace deprecated %%configure2_5x
+
+* Fri Sep 27 2019 daviddavid <daviddavid> 4.1.0-1.mga8
++ Revision: 1446993
+- new version: 4.1.0
+- port to python 3
+
+* Thu Sep 20 2018 umeabot <umeabot> 3.0.3-2.mga7
++ Revision: 1277824
+- Mageia 7 Mass Rebuild
+
+* Fri Aug 24 2018 daviddavid <daviddavid> 3.0.3-1.mga7
++ Revision: 1253687
+- new version: 3.0.3
+- use new python provides
+
+* Fri Mar 02 2018 kekepower <kekepower> 3.0.1-1.mga7
++ Revision: 1206079
+- Update to version 3.0.1
++ tv <tv>
+- %%description is not %%license
+
+* Wed Mar 08 2017 ennael <ennael> 3.0.0-1.mga6
++ Revision: 1089890
+- new version 3.0.0
+
+* Fri Feb 19 2016 umeabot <umeabot> 2.1.4-3.mga6
++ Revision: 969769
+- Mageia 6 Mass Rebuild
+
+* Wed Sep 09 2015 neoclust <neoclust> 2.1.4-2.mga6
++ Revision: 875071
+- Fix build with new rpm ( empty debuginfo)
+
+* Mon Jun 01 2015 ennael <ennael> 2.1.4-1.mga5
++ Revision: 822851
+- new version
+  fix tests in installation
+
+* Wed Oct 15 2014 umeabot <umeabot> 1.2.5-7.mga5
++ Revision: 743473
+- Second Mageia 5 Mass Rebuild
+
+* Fri Sep 26 2014 tv <tv> 1.2.5-6.mga5
++ Revision: 725013
+- rebuild for bogus file deps
+
+* Tue Sep 16 2014 umeabot <umeabot> 1.2.5-5.mga5
++ Revision: 678588
+- Mageia 5 Mass Rebuild
++ pterjan <pterjan>
+- Rebuild for new Python
+
+* Sat Oct 19 2013 umeabot <umeabot> 1.2.5-3.mga4
++ Revision: 522504
+- Mageia 4 Mass Rebuild
+
+* Thu Mar 14 2013 dlucio <dlucio> 1.2.5-2.mga3
++ Revision: 402973
+- Needs corosync to run
+
+* Thu Mar 14 2013 dlucio <dlucio> 1.2.5-1.mga3
++ Revision: 402964
+- more BR
+- xsltproc as BR
+- Cleanups
+- imported package crmsh

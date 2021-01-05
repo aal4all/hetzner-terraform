@@ -1,0 +1,29 @@
+#cloud-config
+users:
+  - name: falko
+    groups: users, admin
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDU5HkuIRg1MUnbhUIHieRdPOhOU7FPkByAb4R98entkH1vzmsd+ox9fNXkWsZrTuwK9QnaGeftKZODoCkESqK/DZMv588YcuqgZObW6/T8hs9sgAsD9SSbJetunUYo9fi+tebhAbKINj0FHW1KjOXpckHEEen0MWbPgXqHIQ3968qnT4lIzvVHuVctQFbw7RfLGoY0Sdntssw1WX7/EdatK0nYFBZ3XZWIlDBA2KyTVDGlm2/8lXQs9hELKC2FHDB7X0q4Ay43Z9Szz9KDR3uNAYPM02kVFunCouRCpk1VaDAntIpmao2yMOZwzstGwMDV46nFG7HChXsi3T5283ej falko@falko-pc
+package_update: true
+package_upgrade: true
+packages:
+  - rpm-build
+  - rpm-devel
+  - rpmlint
+  - gcc 
+  - make
+  - patch
+  - rpmdevtools
+  - vim
+  - epel-release
+  - asciidoc
+  - autoconf
+  - automake
+runcmd:
+  - dnf -y install aria2
+  # crmsh
+  #- pip3 install parallax
+  - dnf config-manager --set-enabled ha
+  - dnf -y install corosync pacemaker python3 python3-devel python3-dateutil python3-lxml python3-PyYAML python3-pygments python3-setuptools pkgconfig libtool procps
